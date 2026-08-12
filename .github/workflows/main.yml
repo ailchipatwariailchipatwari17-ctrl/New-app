@@ -24,6 +24,9 @@ jobs:
         if [ ! -f "build.gradle" ] && [ ! -f "build.gradle.kts" ]; then
           echo "Creating Android project structure..."
           
+          echo "android.useAndroidX=true
+          android.enableJetifier=true" > gradle.properties
+
           echo "pluginManagement {
               repositories {
                   google()
