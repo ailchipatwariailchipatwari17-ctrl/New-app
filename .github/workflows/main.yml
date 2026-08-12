@@ -1,4 +1,4 @@
-name: Build Kotlin APK
+name: Build APK
 
 on:
   push:
@@ -10,25 +10,36 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Rename and Unzip
+    - name: Unzip and Locate Project
       run: |
         mv docuscan-ai.txt project.zip || true
         unzip -o project.zip || true
+        # अगर कोड किसी सब-फ़ोल्डर में है तो उसे बाहर निकालें
+        if [ ! -f "gradlew" ]; then
+          FOUND=$(find . -maxdepth 2 -name "gradlew" -exec dirname {} \;)
+          if [ -n "$FOUND" ]; then
+            cp -r $FOUND/* . || true
+          fi
+        fi
 
     - name: Set up JDK 17
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
 
     - name: Build with Gradle
       run: |
-        chmod +x gradlew || true
-        ./gradlew assembleDebug
+        if [ -f "gradlew" ]; then
+          chmod +x gradlew
+          ./gradlew assembleDebug
+        else
+          echo "Gradlew file not found! Please check your ZIP contents."
+          exit 1
+        fi
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
-        
+        path: "**/build/outputs/apk/debug/*.apk"
