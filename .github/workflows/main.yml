@@ -1,4 +1,4 @@
-name: Build APK
+name: Build Kotlin APK
 
 on:
   push:
@@ -12,18 +12,18 @@ jobs:
 
     - name: Rename and Unzip
       run: |
-        mv docuscan-ai.txt project.zip
-        unzip project.zip
+        mv docuscan-ai.txt project.zip || true
+        unzip -o project.zip || true
 
     - name: Set up JDK 17
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: '17'
         distribution: 'temurin'
 
     - name: Build with Gradle
       run: |
-        chmod +x gradlew
+        chmod +x gradlew || true
         ./gradlew assembleDebug
 
     - name: Upload APK
