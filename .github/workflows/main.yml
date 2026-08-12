@@ -18,16 +18,13 @@ jobs:
 
     - name: Setup Android Project & Unzip Source
       run: |
-        # 1. Zip अनज़िप करें
         mv docuscan-ai.txt project.zip || true
         unzip -o project.zip -d extracted_code || true
 
-        # 2. अगर build.gradle नहीं है, तो एक बेसिक Android स्ट्रक्चर बनाएं
         if [ ! -f "build.gradle" ] && [ ! -f "build.gradle.kts" ]; then
           echo "Creating Android project structure..."
           
-          cat << 'EOF' > settings.gradle
-          pluginManagement {
+          echo "pluginManagement {
               repositories {
                   google()
                   mavenCentral()
@@ -41,21 +38,17 @@ jobs:
                   mavenCentral()
               }
           }
-          rootProject.name = "DocuscanApp"
-          include ':app'
-EOF
+          rootProject.name = 'DocuscanApp'
+          include ':app'" > settings.gradle
 
-          cat << 'EOF' > build.gradle
-          plugins {
+          echo "plugins {
               id 'com.android.application' version '8.2.2' apply false
               id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
-          }
-EOF
+          }" > build.gradle
 
           mkdir -p app/src/main/java app/src/main/res/values
 
-          cat << 'EOF' > app/build.gradle
-          plugins {
+          echo "plugins {
               id 'com.android.application'
               id 'org.jetbrains.kotlin.android'
           }
@@ -65,11 +58,11 @@ EOF
               compileSdk 34
 
               defaultConfig {
-                  applicationId "com.example.docuscan"
+                  applicationId 'com.example.docuscan'
                   minSdk 24
                   targetSdk 34
                   versionCode 1
-                  versionName "1.0"
+                  versionName '1.0'
               }
 
               buildTypes {
@@ -90,11 +83,9 @@ EOF
               implementation 'androidx.core:core-ktx:1.12.0'
               implementation 'androidx.appcompat:appcompat:1.6.1'
               implementation 'com.google.android.material:material:1.11.0'
-          }
-EOF
+          }" > app/build.gradle
 
-          cat << 'EOF' > app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
+          echo '<?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <application
                   android:allowBackup="true"
@@ -102,14 +93,11 @@ EOF
                   android:label="Docuscan AI"
                   android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
               </application>
-          </manifest>
-EOF
+          </manifest>' > app/src/main/AndroidManifest.xml
 
-          # निकालें गए Kotlin/Java कोड को सही पैकेज फ़ोल्डर में डालें
           cp -r extracted_code/* app/src/main/java/ || true
         fi
 
-        # 3. Gradle Wrapper बनाएँ
         gradle wrapper
 
     - name: Build Debug APK
