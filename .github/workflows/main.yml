@@ -10,31 +10,115 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Unzip Project
-      run: |
-        mv docuscan-ai.txt project.zip || true
-        unzip -o project.zip || true
-
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Auto Generate Gradle Wrapper if Missing
+    - name: Setup Android Project & Unzip Source
       run: |
-        if [ ! -f "gradlew" ]; then
-          echo "Generating Gradle Wrapper..."
-          gradle wrapper
-        fi
-        chmod +x gradlew
+        # 1. Zip अनज़िप करें
+        mv docuscan-ai.txt project.zip || true
+        unzip -o project.zip -d extracted_code || true
 
-    - name: Build APK
+        # 2. अगर build.gradle नहीं है, तो एक बेसिक Android स्ट्रक्चर बनाएं
+        if [ ! -f "build.gradle" ] && [ ! -f "build.gradle.kts" ]; then
+          echo "Creating Android project structure..."
+          
+          cat << 'EOF' > settings.gradle
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "DocuscanApp"
+          include ':app'
+EOF
+
+          cat << 'EOF' > build.gradle
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
+              id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
+          }
+EOF
+
+          mkdir -p app/src/main/java app/src/main/res/values
+
+          cat << 'EOF' > app/build.gradle
+          plugins {
+              id 'com.android.application'
+              id 'org.jetbrains.kotlin.android'
+          }
+
+          android {
+              namespace 'com.example.docuscan'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.example.docuscan"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = '17'
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.core:core-ktx:1.12.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.material:material:1.11.0'
+          }
+EOF
+
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:allowBackup="true"
+                  android:icon="@android:drawable/sym_def_app_icon"
+                  android:label="Docuscan AI"
+                  android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
+              </application>
+          </manifest>
+EOF
+
+          # निकालें गए Kotlin/Java कोड को सही पैकेज फ़ोल्डर में डालें
+          cp -r extracted_code/* app/src/main/java/ || true
+        fi
+
+        # 3. Gradle Wrapper बनाएँ
+        gradle wrapper
+
+    - name: Build Debug APK
       run: |
-        ./gradlew assembleDebug || gradle assembleDebug
+        chmod +x gradlew
+        ./gradlew assembleDebug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: "**/build/outputs/apk/debug/*.apk"
+        path: app/build/outputs/apk/debug/app-debug.apk
