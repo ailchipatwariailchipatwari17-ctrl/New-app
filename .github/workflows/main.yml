@@ -1,50 +1,58 @@
-name: Build Android APK
+name: Build React TypeScript APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ] # आपकी मुख्य ब्रांच (main या master)
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      # 1. कोड चेकआउट करें
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 21
-      uses: actions/setup-java@v4
-      with:
-        java-version: '21'
-        distribution: 'temurin'
+      # 2. Node.js सेटअप करें
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-    - name: Unzip Project Code
-      run: |
-        unzip -o docuscan-ai.zip -d .
-        if [ ! -f "build.gradle" ] && [ ! -f "build.gradle.kts" ]; then
-          FOUND=$(find . -maxdepth 2 -name "build.gradle*" -exec dirname {} \;)
-          if [ -n "$FOUND" ]; then
-            cp -r $FOUND/* . || true
-          fi
-        fi
+      # 3. Java 17 सेटअप करें (Android बिल्ड के लिए आवश्यक)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: Clean Gradle Caches
-      run: |
-        rm -rf ~/.gradle/caches/
-        rm -rf ~/.gradle/daemon/
+      # 4. NPM पैकेज इंस्टॉल करें
+      - name: Install Dependencies
+        run: npm ci
 
-    - name: Setup Gradle 9.3.1 Wrapper
-      run: |
-        gradle wrapper --gradle-version 9.3.1
+      # 5. React TypeScript प्रोजेक्ट बिल्ड करें
+      - name: Build Web App
+        run: npm run build
 
-    - name: Grant Execute Permission for Gradlew
-      run: chmod +x gradlew
+      # 6. Capacitor sync चलाएं
+      - name: Sync Capacitor
+        run: npx cap sync android
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug --no-daemon
+      # 7. Gradlew को एग्जीक्यूट परमिशन दें
+      - name: Make Gradlew Executable
+        run: chmod +x android/gradlew
 
-    - name: Upload Debug APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-debug
-        path: "**/build/outputs/apk/debug/*.apk"
+      # 8. APK तैयार करें (Debug APK)
+      - name: Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      # 9. APK अपलोड करें
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
