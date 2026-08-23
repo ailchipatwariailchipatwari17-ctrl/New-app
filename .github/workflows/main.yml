@@ -1,4 +1,4 @@
-name: Build React TypeScript APK
+name: Build  React TypeScript APK
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
         run: npm ci
 
       # 5. React TypeScript प्रोजेक्ट बिल्ड करें
-      - name: Build Web App
+      - name: Build Web App 
         run: npm run build
 
       # 6. Capacitor sync चलाएं
