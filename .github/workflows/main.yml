@@ -2,9 +2,8 @@ name: Build App
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,13 +13,48 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Zip फाइल का नाम अपनी रिपॉजिटरी की zip फाइल के हिसाब से चेक कर लें
+      - name: Unzip Project Code
+        run: unzip -o *.zip -d .
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
       - name: Install Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Build Project
+      - name: Build Web App
         run: npm run build
+
+      - name: Add Capacitor Android Platform
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init NewApp com.newapp.app --web-dir dist || npx cap init NewApp com.newapp.app --web-dir build
+          npx cap add android
+          npx cap sync android
+
+      - name: Fix Kotlin Duplicate Classes
+        run: |
+          echo "configurations.all { resolutionStrategy.force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22', 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22', 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22' }" >> android/app/build.gradle
+
+      - name: Make Gradlew Executable
+        run: chmod +x android/gradlew
+
+      - name: Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleDebug -Pandroid.useAndroidX=true
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
