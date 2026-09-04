@@ -13,9 +13,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Zip फाइल का नाम अपनी रिपॉजिटरी की zip फाइल के हिसाब से चेक कर लें
+      # ZIP फाइल के अंदर फोल्डर हो तो भी सही जगह एक्सट्रैक्ट करेगा
       - name: Unzip Project Code
-        run: unzip -o *.zip -d .
+        run: |
+          unzip -o *.zip -d temp_extracted
+          if [ -f temp_extracted/package.json ]; then
+            mv temp_extracted/* . 2>/dev/null || true
+          else
+            mv temp_extracted/*/* . 2>/dev/null || true
+          fi
+          rm -rf temp_extracted
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
