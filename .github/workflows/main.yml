@@ -13,16 +13,34 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # ZIP फाइल के अंदर फोल्डर हो तो भी सही जगह एक्सट्रैक्ट करेगा
-      - name: Unzip Project Code
+      # 1. Zip फाइल को सही से खोजना और एक्सट्रैक्ट करना
+      - name: Find and Unzip Code
         run: |
-          unzip -o *.zip -d temp_extracted
-          if [ -f temp_extracted/package.json ]; then
-            mv temp_extracted/* . 2>/dev/null || true
+          echo "=== Step 1: Locating files ==="
+          ls -la
+          ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Found zip file: $ZIP_FILE"
+            unzip -o "$ZIP_FILE" -d temp_extracted
+            
+            # अगर package.json temp_extracted के अंदर है
+            if [ -f "temp_extracted/package.json" ]; then
+              cp -r temp_extracted/* .
+            else
+              # अगर package.json किसी सब-फोल्डर के अंदर है
+              INNER_PKG=$(find temp_extracted -name "package.json" | head -n 1)
+              if [ -n "$INNER_PKG" ]; then
+                INNER_DIR=$(dirname "$INNER_PKG")
+                echo "Found project files inside: $INNER_DIR"
+                cp -r "$INNER_DIR"/* .
+              fi
+            fi
+            rm -rf temp_extracted
           else
-            mv temp_extracted/*/* . 2>/dev/null || true
+            echo "No zip file found!"
           fi
-          rm -rf temp_extracted
+          echo "=== Step 2: Final directory state ==="
+          ls -la
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
