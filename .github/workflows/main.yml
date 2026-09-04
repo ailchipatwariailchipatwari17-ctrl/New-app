@@ -13,20 +13,28 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # स्पेस वाली Zip फाइल को सीधा अनज़िप करने का सही तरीका
-      - name: Find and Unzip Code
+      # ZIP फाइल को ऑटोमैटिक ढूंढकर package.json वाली लोकेशन को रूट में सेट करना
+      - name: Auto Find and Unzip Code
         run: |
-          unzip -o "video-inpainter .zip" -d temp_extracted || unzip -o video-inpainter*.zip -d temp_extracted
-          if [ -f "temp_extracted/package.json" ]; then
-            cp -r temp_extracted/* .
-          else
-            INNER_PKG=$(find temp_extracted -name "package.json" | head -n 1)
-            if [ -n "$INNER_PKG" ]; then
-              INNER_DIR=$(dirname "$INNER_PKG")
-              cp -r "$INNER_DIR"/* .
+          ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Found zip file: $ZIP_FILE"
+            unzip -o "$ZIP_FILE" -d temp_extracted
+            
+            # package.json की सटीक लोकेशन खोजना
+            PKG_PATH=$(find temp_extracted -name "package.json" | head -n 1)
+            if [ -n "$PKG_PATH" ]; then
+              PKG_DIR=$(dirname "$PKG_PATH")
+              echo "Moving files from $PKG_DIR to root..."
+              cp -rn "$PKG_DIR"/* . 2>/dev/null || true
+              cp -rn "$PKG_DIR"/.* . 2>/dev/null || true
+            else
+              echo "Error: package.json not found inside ZIP!"
             fi
+            rm -rf temp_extracted
+          else
+            echo "Error: No ZIP file found in repository!"
           fi
-          rm -rf temp_extracted
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
