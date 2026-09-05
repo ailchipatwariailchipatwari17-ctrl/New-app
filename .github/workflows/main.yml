@@ -32,13 +32,20 @@ jobs:
             rm -rf temp_extracted
           fi
 
-      # Android बिल्ड के लिए Java 17/21 सेट करना
+      # Android बिल्ड के लिए Java 21 सेट करना
       - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: 'gradle'
+
+      # Missing Keystore समस्या का हल
+      - name: Generate Dummy Debug Keystore
+        run: |
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          cp debug.keystore ~/.android/debug.keystore
 
       # Gradle Executable permissions
       - name: Make Gradlew Executable
@@ -60,3 +67,4 @@ jobs:
         with:
           name: video-inpainter-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          
